@@ -70,10 +70,22 @@ local function no_clip_update()
 
     local local_player_actor = natives.actor.get_player_actor(-1)
 
-    -- Enable/Disable No Clip F4 (Keyboard) - X + LSTICK Click (XBOX Controller)
-    if natives.extended.is_key_pressed("F4") or (natives.core.is_digital_action_down("@GENERIC.ZOOM_RADAR", 1, 0) and natives.core.is_digital_action_pressed("@FOOT.JUMP", 1, 0)) then
+    local is_using_keyboard_and_mouse = natives.core.is_using_keyboard_and_mouse(0)
 
-        no_clip_requested = true
+    -- Enable/Disable No Clip F4 (Keyboard) - X + LSTICK Click (XBOX Controller)
+    if is_using_keyboard_and_mouse then
+
+        if natives.extended.is_key_pressed("F4") then
+
+            no_clip_requested = true
+        end
+        
+    else
+
+        if natives.core.is_digital_action_down("@GENERIC.ZOOM_RADAR", 1, 0) and natives.core.is_digital_action_pressed("@FOOT.JUMP", 1, 0) then
+
+            no_clip_requested = true
+        end
     end
 
     if no_clip_requested then
@@ -114,7 +126,7 @@ local function no_clip_update()
         end
     end
 
-    if not no_clip then
+    if not no_clip or chat.is_open() then
 
         -- Don't do anything if no clip is off
         return
@@ -126,7 +138,7 @@ local function no_clip_update()
 
     local input_lower_raise = { "@GENERIC.TARGET", "@GENERIC.FIRE" }
 
-    if natives.core.is_using_keyboard_and_mouse(0) then
+    if is_using_keyboard_and_mouse then
 
         input_lower_raise = { "@FOOT.CROUCH", "@FOOT.JUMP" }
     end
