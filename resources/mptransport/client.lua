@@ -219,10 +219,12 @@ local function mp_transport_update()
         natives.stringtable.request_string_table("multiplayer")
     end
 
+    local local_player_actor = natives.actor.get_player_actor(-1)
+
     if not natives.hud.hud_is_fading() and natives.hud.hud_is_faded() and mp_transport_loading_check then
 
         remove_contexts()
-	    natives.actor.teleport_actor_with_heading(natives.actor.get_player_actor(-1), mp_transport[mp_transport_index].teleport.pos, mp_transport[mp_transport_index].teleport.h, true, true, true);
+	    natives.actor.teleport_actor_with_heading(local_player_actor, mp_transport[mp_transport_index].teleport.pos, mp_transport[mp_transport_index].teleport.h, true, true, true);
         natives.cam.camera_reset(0)
 
         if get_time_taken(request_time, 4000) then
@@ -251,7 +253,7 @@ local function mp_transport_update()
 
             if get_distance_to_mp_transport_propsets(2.0) then
 
-                if not natives.game.is_script_use_context_valid(mp_transport_context[1]) then
+                if not natives.game.is_script_use_context_valid(mp_transport_context[1]) and not natives.vehicles.is_actor_riding_vehicle(local_player_actor) and not natives.riding.is_actor_riding(local_player_actor) then
 
                     mp_transport_context[1] = natives.game.add_script_use_context("mp_teleport", 30, "@GENERIC.USE", "", "", "", "", -1, "HUD_MENU_SELECT_MASTER")
                 else
