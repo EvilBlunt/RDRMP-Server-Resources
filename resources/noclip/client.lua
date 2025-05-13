@@ -82,6 +82,7 @@ local function no_clip_update()
         
     else
 
+        -- We want to make sure to handle the digital inputs only for controller, bcs otherwise on keyboard it would toggle the noclip with T + Space bar
         if natives.core.is_digital_action_down("@GENERIC.ZOOM_RADAR", 1, 0) and natives.core.is_digital_action_pressed("@FOOT.JUMP", 1, 0) then
 
             no_clip_requested = true
@@ -128,7 +129,7 @@ local function no_clip_update()
 
     if not no_clip or chat.is_open() then
 
-        -- Don't do anything if no clip is off
+        -- Don't do anything if no clip is off (or if chatbox is currently open)
         return
     end
 
@@ -231,5 +232,28 @@ thread.create(function()
         no_clip_update()
 
         thread.wait(0)
+    end
+end)
+
+
+
+-- When the chat is opened and noclip is on, we want to input remove prompts
+event.add_handler("core:on_chat_open", function()
+
+    if no_clip then
+        
+        remove_prompts()
+    end
+end)
+
+
+
+-- When the chat has been closed and noclip is on, we want to block inputs correctly (bcs when chat is closed/open it mess with this native)
+event.add_handler("core:on_chat_close", function()
+
+    if no_clip then
+        
+        -- Disable player controls while still keeping camera control
+        natives.actor.set_player_control(-1, false, 1, 1)
     end
 end)
