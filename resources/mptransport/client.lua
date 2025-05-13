@@ -221,12 +221,16 @@ local function mp_transport_update()
 
     if not natives.hud.hud_is_fading() and natives.hud.hud_is_faded() and mp_transport_loading_check then
 
+        remove_contexts()
 	    natives.actor.teleport_actor_with_heading(natives.actor.get_player_actor(-1), mp_transport[mp_transport_index].teleport.pos, mp_transport[mp_transport_index].teleport.h, true, true, true);
         natives.cam.camera_reset(0)
-        
-        if get_time_taken(request_time, 5000) then
+
+        if get_time_taken(request_time, 4000) then
             natives.hud.hud_fade_in_now(1.0, 0.0)
             mp_transport_loading_check = false
+            mp_transport_in_use = false
+            mp_transport_index = 1
+            natives.actor.set_player_control(-1, true, 0, 0)
         end
     end
 
@@ -278,21 +282,22 @@ local function mp_transport_update()
                 end
             end
 
-            if natives.game.is_script_use_context_pressed(mp_transport_context[1]) or natives.game.is_script_use_context_pressed(mp_transport_context[2]) then
+            if natives.game.is_script_use_context_pressed(mp_transport_context[1]) then
 
-                if natives.game.is_script_use_context_pressed(mp_transport_context[2]) then
-
-                    if not natives.hud.hud_is_fading() then
-                        natives.hud.hud_fade_to_loading_screen()
-                    end
-
-					request_time = GET_GAME_TIMER();
-					mp_transport_loading_check = true;
-                end
                 remove_contexts()
                 mp_transport_in_use = false
                 mp_transport_index = 1
                 natives.actor.set_player_control(-1, true, 0, 0)
+            end
+
+            if natives.game.is_script_use_context_pressed(mp_transport_context[2]) then
+
+                if not natives.hud.hud_is_fading() then
+                    natives.hud.hud_fade_to_loading_screen()
+                end
+
+				request_time = GET_GAME_TIMER();
+				mp_transport_loading_check = true;
             end
 
             if natives.game.is_script_use_context_pressed(mp_transport_context[3]) or natives.game.is_script_use_context_pressed(mp_transport_context[4]) then
