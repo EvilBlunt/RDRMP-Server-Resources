@@ -335,3 +335,30 @@ thread.create(function()
         thread.wait(0)
     end
 end)
+
+
+
+event.add_handler("core:on_resource_stop", function(_name)
+    
+    if _name == CURRENT_RESOURCE_NAME then
+        
+        -- We're cleaning everything on resource stop
+        for i = 1, #mp_transport do
+
+            if natives.object.is_object_valid(mp_transport_propset[i]) then
+
+                if natives.hud.is_blip_valid(mp_transport_propset_blip[i]) then
+
+                    natives.hud.remove_blip(mp_transport_propset_blip[i])
+                end
+
+                natives.object.destroy_object(mp_transport_propset[i])
+            end
+
+            if natives.object.is_object_valid(mp_transport_mp_text[i]) then
+
+                natives.object.destroy_object(mp_transport_mp_text[i])
+            end
+        end
+    end
+end)
