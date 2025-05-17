@@ -101,67 +101,97 @@ local mp_transport =
     }
 }
 
+
+-- Some utility functions
 local function GET_GAME_TIMER()
+
     return math.floor(natives.core.get_current_game_time() * 1000)
 end
 
+
+
 local function get_time_taken(time1, time2)
+
     return GET_GAME_TIMER() - time1 > time2
 end
 
+
+
+-- Clear all input contexts
 local function remove_contexts()
 
     for i = 1, #mp_transport_context do
+
         if natives.game.is_script_use_context_valid(mp_transport_context[i]) then
+
             natives.game.release_script_use_context(mp_transport_context[i])
         end
     end
 end
 
+
+
+-- Check if at least one propset object is valid
 local function is_mp_transport_propsets_valid()
 
     for i = 1, #mp_transport do
+
         if natives.object.is_object_valid(mp_transport_propset[i]) then
+
             return true
         end
     end
+
     return false
 end
 
-local function get_distance_to_mp_transport_propsets(distance)
-    local local_player_actor = natives.actor.get_player_actor(-1)
-    local local_player_position = natives.object.get_object_position(local_player_actor)
+
+
+-- Check the distance between player position and every propsets
+local function get_distance_to_mp_transport_propsets(_player_position, _distance)
 
     for i = 1, #mp_transport do
-        if vector3.distance(local_player_position, natives.object.get_object_position(mp_transport_propset[i])) <= distance then
+
+        local propset_position = natives.object.get_object_position(mp_transport_propset[i])
+
+        if vector3.distance(_player_position, propset_position) <= _distance then
+
             return true
         end
     end
+
     return false
 end
 
-local function create_mp_transport_propsets()
-    local local_player_actor = natives.actor.get_player_actor(-1)
-    local local_player_position = natives.object.get_object_position(local_player_actor)
+
+
+-- Create propsets if player is within 90.0m from it
+-- if not the propset is deleted
+local function create_mp_transport_propsets(_player_position)
 
     for i = 1, #mp_transport do
 
-        if vector3.distance(local_player_position, mp_transport[i].propset.pos) <= 90.0 then
+        if vector3.distance(_player_position, mp_transport[i].propset.pos) <= 90.0 then
 
             if not natives.object.is_object_valid(mp_transport_propset[i]) then
 
                 local refGroupPath = "$/tune/refGroups/refgroups/mp_transport"
+
                 natives.object.request_asset(refGroupPath, 7)
+
                 local asset_id = natives.object.get_asset_id(refGroupPath, 7)
 
                 natives.stream.streaming_request_propset(asset_id)
+
                 while not natives.stream.streaming_is_propset_loaded(asset_id) do
+
                     thread.wait(0)
                 end
 
                 mp_transport_propset[i] = natives.object.create_propset_in_layout(natives.object.find_named_layout("PlayerLayout"), "", refGroupPath, mp_transport[i].propset.pos, vector3(0.0, mp_transport[i].propset.h, 0.0))
 
                 mp_transport_propset_blip[i] = natives.hud.add_blip_for_object(mp_transport_propset[i], 396, 0.0, 2, 0)
+
                 natives.hud.set_blip_name(mp_transport_propset_blip[i], "mp_TELEPORT_tis")
                 natives.hud.set_blip_scale(mp_transport_propset_blip[i], 1.0)
                 natives.hud.set_blip_priority(mp_transport_propset_blip[i], 2)
@@ -169,15 +199,22 @@ local function create_mp_transport_propsets()
 
                 local objectLayout = natives.object.get_layout_from_object(mp_transport_propset[i])
                 local objectIterator = natives.object.create_object_iterator(objectLayout)
+
                 natives.object.iterate_in_layout(objectIterator, objectLayout)
+
                 local iteratorObject = natives.object.start_object_iterator(objectIterator)
+
                 while natives.object.is_object_valid(iteratorObject) do
+
                     natives.physics.set_physinst_frozen(natives.prop.get_physinst_from_object(iteratorObject), true)
+
                     iteratorObject = natives.object.object_iterator_next(objectIterator)
                 end
+
                 natives.object.destroy_iterator(objectIterator)
 
                 if natives.stream.streaming_is_propset_loaded(asset_id) then
+
                     natives.stream.streaming_evict_propset(asset_id)
                 end
             end
@@ -185,73 +222,107 @@ local function create_mp_transport_propsets()
         else
 
             if natives.object.is_object_valid(mp_transport_propset[i]) then
+
                 if natives.hud.is_blip_valid(mp_transport_propset_blip[i]) then
+
                     natives.hud.remove_blip(mp_transport_propset_blip[i])
                 end
+
                 natives.object.destroy_object(mp_transport_propset[i])
             end
         end
     end
 end
 
-local function create_mp_transport_mp_texts()
-    local local_player_actor = natives.actor.get_player_actor(-1)
-    local local_player_position = natives.object.get_object_position(local_player_actor)
+
+
+-- Create a 3D text above the propset position under 20m
+-- if not in this area, the text get deleted
+local function create_mp_transport_mp_texts(_player_position, _camera_heading)
 
     for i = 1, #mp_transport do
 
         local propset_position = natives.object.get_object_position(mp_transport_propset[i])
-        if vector3.distance(local_player_position, propset_position) <= 20.0 then
+
+        if vector3.distance(_player_position, propset_position) <= 20.0 then
+
             if not natives.object.is_object_valid(mp_transport_mp_text[i]) then
-                mp_transport_mp_text[i] = natives.gravestone.create_mp_text(mp_transport_propset[i], "", "mp_TELEPORT_tis", vector3(propset_position.x, propset_position.y + 2.0, propset_position.z), vector3(0.0, natives.object.get_object_heading(natives.cam.get_game_camera()), 0.0), 0xFCAF17)
+
+                mp_transport_mp_text[i] = natives.gravestone.create_mp_text(mp_transport_propset[i], "", "mp_TELEPORT_tis", vector3(propset_position.x, propset_position.y + 2.0, propset_position.z), vector3(0.0, _camera_heading, 0.0), 0xFCAF17)
             end
         else
+
             if natives.object.is_object_valid(mp_transport_mp_text[i]) then
+
                 natives.object.destroy_object(mp_transport_mp_text[i])
             end
         end
     end
 end
 
+
+
+-- Update the 3D text rotation to always face the game camera heading
+local function update_mp_transport_mp_texts(_camera_heading)
+
+    for i = 1, #mp_transport do
+
+        if natives.object.is_object_valid(mp_transport_mp_text[i]) then
+
+            natives.object.set_object_orientation(mp_transport_mp_text[i], vector3(0.0, _camera_heading, 0.0))
+        end
+    end
+end
+
+
+
+-- Global update function
 local function mp_transport_update()
 
+    -- We make sure that 'multiplayer' string table is loaded
+    -- it will be needed to get the GXT entries from original multiplayer
     if not natives.stringtable.has_string_table_loaded("multiplayer") then
+
         natives.stringtable.request_string_table("multiplayer")
     end
 
     local local_player_actor = natives.actor.get_player_actor(-1)
+    local local_player_position = natives.object.get_object_position(local_player_actor)
 
     if not natives.hud.hud_is_fading() and natives.hud.hud_is_faded() and mp_transport_loading_check then
 
         remove_contexts()
-	    natives.actor.teleport_actor_with_heading(local_player_actor, mp_transport[mp_transport_index].teleport.pos, mp_transport[mp_transport_index].teleport.h, true, true, true);
+
+	    natives.actor.teleport_actor_with_heading(local_player_actor, mp_transport[mp_transport_index].teleport.pos, mp_transport[mp_transport_index].teleport.h, true, true, true)
         natives.cam.camera_reset(0)
 
         if get_time_taken(request_time, 4000) then
+
             natives.hud.hud_fade_in_now(1.0, 0.0)
+
             mp_transport_loading_check = false
             mp_transport_in_use = false
             mp_transport_index = 1
+
+            -- Restore player controls
             natives.actor.set_player_control(-1, true, 0, 0)
         end
     end
 
-    create_mp_transport_propsets()
+    create_mp_transport_propsets(local_player_position)
 
 	if is_mp_transport_propsets_valid() then
 
-        for i = 1, #mp_transport do
+        local game_camera = natives.cam.get_game_camera()
+        local camera_heading = natives.object.get_object_heading(game_camera)
 
-            if natives.object.is_object_valid(mp_transport_mp_text[i]) then
-                natives.object.set_object_orientation(mp_transport_mp_text[i], vector3(0.0, natives.object.get_object_heading(natives.cam.get_game_camera()), 0.0))
-            end
-        end
+        update_mp_transport_mp_texts(camera_heading)
 
         if not mp_transport_in_use then
 
-            create_mp_transport_mp_texts()
+            create_mp_transport_mp_texts(local_player_position, camera_heading)
 
-            if get_distance_to_mp_transport_propsets(2.0) then
+            if get_distance_to_mp_transport_propsets(local_player_position, 2.0) then
 
                 if not natives.game.is_script_use_context_valid(mp_transport_context[1]) and not natives.vehicles.is_actor_riding_vehicle(local_player_actor) and not natives.riding.is_actor_riding(local_player_actor) then
 
@@ -264,11 +335,13 @@ local function mp_transport_update()
                         mp_transport_in_use = true
 
                         remove_contexts()
+
                         mp_transport_context[1] = natives.game.add_script_use_context("mp_exit_teleport", 10, "@GENERIC.USE", "", "", "", "", -1, "")
                         mp_transport_context[2] = natives.game.add_script_use_context(mp_transport[mp_transport_index].name, 10, "@UI.ACCEPT", "", "", "", "", -1, "")
                         mp_transport_context[3] = natives.game.add_script_use_context_stick("pass_coach_previousdest", 10, "@UI.NAVIGATE_UP", "", "", "", "", -1, "")
                         mp_transport_context[4] = natives.game.add_script_use_context_stick("pass_coach_nextdest", 10, "@UI.NAVIGATE_DOWN", "", "", "", "", -1, "")
 
+                        -- Block player controls
                         natives.actor.set_player_control(-1, false, 1, 1)
                     end
                 end
@@ -278,53 +351,74 @@ local function mp_transport_update()
             end
         else
 
+            -- Remove all 3D texts
             for i = 1, #mp_transport_mp_text do
+
                 if natives.object.is_object_valid(mp_transport_mp_text[i]) then
+
                     natives.object.destroy_object(mp_transport_mp_text[i])
                 end
             end
 
-            if natives.game.is_script_use_context_pressed(mp_transport_context[1]) then
+            -- Handle inputs
+            local cancel_pressed = natives.game.is_script_use_context_pressed(mp_transport_context[1])
+            local accept_pressed = natives.game.is_script_use_context_pressed(mp_transport_context[2])
+            local up_pressed = natives.game.is_script_use_context_pressed(mp_transport_context[3])
+            local down_pressed = natives.game.is_script_use_context_pressed(mp_transport_context[4])
+
+            if cancel_pressed then
 
                 remove_contexts()
+
                 mp_transport_in_use = false
                 mp_transport_index = 1
+
+                -- Restore player controls
                 natives.actor.set_player_control(-1, true, 0, 0)
             end
 
-            if natives.game.is_script_use_context_pressed(mp_transport_context[2]) then
+            if accept_pressed then
 
                 if not natives.hud.hud_is_fading() then
+
                     natives.hud.hud_fade_to_loading_screen()
                 end
 
-				request_time = GET_GAME_TIMER();
-				mp_transport_loading_check = true;
+				request_time = GET_GAME_TIMER()
+
+				mp_transport_loading_check = true
             end
 
-            if natives.game.is_script_use_context_pressed(mp_transport_context[3]) or natives.game.is_script_use_context_pressed(mp_transport_context[4]) then
+            if up_pressed or down_pressed then
 
-                if natives.game.is_script_use_context_pressed(mp_transport_context[3]) then
+                if up_pressed then
 
                     if mp_transport_index == 1 then
+
                         mp_transport_index = #mp_transport
                     else
+
                         mp_transport_index = mp_transport_index - 1
                     end
 
-                elseif natives.game.is_script_use_context_pressed(mp_transport_context[4]) then
+                elseif down_pressed then
 
                     if mp_transport_index == #mp_transport then
+
                         mp_transport_index = 1
                     else
+
                         mp_transport_index = mp_transport_index + 1
                     end
                 end
-				natives.game.set_use_context_text(mp_transport_context[2], mp_transport[mp_transport_index].name, "", "", 0, 0);
+
+				natives.game.set_use_context_text(mp_transport_context[2], mp_transport[mp_transport_index].name, "", "", 0, 0)
             end
         end
     end
 end
+
+
 
 thread.create(function()
 
@@ -339,9 +433,9 @@ end)
 
 
 event.add_handler("core:on_resource_stop", function(_name)
-    
+
     if _name == CURRENT_RESOURCE_NAME then
-        
+
         -- We're cleaning everything on resource stop
         for i = 1, #mp_transport do
 
