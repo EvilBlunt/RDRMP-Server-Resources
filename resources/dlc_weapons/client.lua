@@ -17,11 +17,24 @@ local Weapons =
 
 local function init()
 
+    -- Load DLC strings
+    natives.dlc.dlc_init_stringtable_streamables("$/strings/DLC/zombiepack/stringtable", "StringTableList")
+    
+    natives.stringtable.request_string_table("zombiepack_mp")
+
+    while not natives.stringtable.has_string_table_loaded("zombiepack_mp") do
+
+        thread.wait(0)
+    end
+
     -- Load the DLC PTFX pack (This will load the fire on the torch for example)
     natives.fx.load_ptfx_dlc_assets("zombiePack_core")
 
     -- Load the audio data packs (Will load the fire sound when waving the torch, but for some reason it doesn't load the sound when being idle with the torch)
     natives.audio.load_audio_metadata("sounds", "dlc6_sounds.dat", "DLC6")
+
+    -- Load the weapon wheel textures
+    natives.ui.ui_register_streaming_texture("$/mapres/", "radial_mel_torch", 0, 16)
 end
 
 
