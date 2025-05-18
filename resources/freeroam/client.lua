@@ -11,6 +11,11 @@ local regen_multiplier = 4.0 -- x4 by default
 
 -- Player regen script
 local function health_regen_start()
+
+    while natives.actor.get_player_actor(-1) == 0 do
+        
+        thread.wait(0)
+    end
     
     local local_player_actor = natives.actor.get_player_actor(-1)
 
