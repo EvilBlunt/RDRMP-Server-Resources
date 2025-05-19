@@ -140,14 +140,14 @@ local function create_player_blip(_client, _name, _islocal)
     end
 
     -- Create the player blip
-    local playerBlip = natives.hud.add_blip_for_actor(player.actor, 356, 0.0, 0, 0)
+    local player_blip = natives.hud.add_blip_for_actor(player.actor, 356, 0.0, 0, 0)
 
     -- Set blip name to player name
-    natives.ui.ui_set_string("Generic_Dbuffer128_1", _name)
-    natives.hud.set_blip_name(playerBlip, "Generic_Dbuffer128_1")
+    natives.extended.ui_add_string("PLAYER_BLIP_".._client, _name)
+    natives.hud.set_blip_name(player_blip, "PLAYER_BLIP_".._client)
 
     -- Set a slightly smaller blip size
-    natives.hud.set_blip_scale(playerBlip, 0.8)
+    natives.hud.set_blip_scale(player_blip, 0.8)
 end
 
 
