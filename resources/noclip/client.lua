@@ -79,7 +79,7 @@ local function no_clip_update()
 
             no_clip_requested = true
         end
-        
+
     else
 
         -- We want to make sure to handle the digital inputs only for controller, bcs otherwise on keyboard it would toggle the noclip with T + Space bar
@@ -90,35 +90,35 @@ local function no_clip_update()
     end
 
     if no_clip_requested then
-        
+
         no_clip_requested = false
 
         no_clip = not no_clip
 
         if no_clip then
-    
+
             -- Freeze the player actor ONLY if not already frozen (e.g. from an other script)
             if not natives.entity.is_mover_frozen(local_player_actor) then
-    
+
                 natives.entity.set_mover_frozen(local_player_actor, true)
             end
 
             -- Disable player controls while still keeping camera control
             natives.actor.set_player_control(-1, false, 1, 1)
-    
+
             -- Show a notification the no clip has been enabled
             natives.hud.print_small_b("No Clip <green>On", 0.5, true, 0, 0, 0, 0)
         else
-    
+
             -- Unfreeze the player actor ONLY if currently frozen
             if natives.entity.is_mover_frozen(local_player_actor) then
-    
+
                 natives.entity.set_mover_frozen(local_player_actor, false)
             end
-            
+
             -- Give player control Back
             natives.actor.set_player_control(-1, true, 0, 0)
-    
+
             -- Show a notification the no clip has been disabled
             natives.hud.print_small_b("No Clip <red>Off", 0.5, true, 0, 0, 0, 0)
 
@@ -241,7 +241,7 @@ end)
 event.add_handler("core:on_chat_open", function()
 
     if no_clip then
-        
+
         remove_prompts()
     end
 end)
@@ -252,7 +252,7 @@ end)
 event.add_handler("core:on_chat_close", function()
 
     if no_clip then
-        
+
         -- Disable player controls while still keeping camera control
         natives.actor.set_player_control(-1, false, 1, 1)
     end

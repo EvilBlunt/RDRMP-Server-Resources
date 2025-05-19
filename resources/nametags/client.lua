@@ -2,27 +2,13 @@ local players_nametag = {}
 
 
 
--- Some utility functions
-local function normalize(v)
-
-    local length = math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
-    
-    if length == 0 then
-
-        return vector3(0.0, 0.0, 0.0)
-    end
-
-    return vector3(v.x / length, v.y / length, v.z / length)
-end
-
-
-
+-- Utility function
 local function direction_to_euler(_direction)
 
-    local dir = normalize(_direction)
+    local dir = _direction:normalized()
 
-    local yaw = math.atan(dir.x, dir.z)
     local pitch = math.asin(-dir.y)
+    local yaw = math.atan(dir.x, dir.z)
 
     local rad_to_deg = 180.0 / math.pi
 
@@ -35,7 +21,7 @@ local function nametags_start()
 
     -- Pre fill for players nametags table
     for i = 1, 33 do
-        
+
         players_nametag[i] = nil
     end
 end
@@ -55,7 +41,7 @@ local function nametags_update()
         if player then
 
             local player_position = natives.actor.get_position(player.actor)
-            
+
             player_position.y = player_position.y + 2.0
 
             natives.object.set_object_position(nametag, player_position)
@@ -71,7 +57,7 @@ local function create_player_nametag(_client, _name, _islocal)
 
     -- Don't do anything if it's the local player
     if _islocal then
-    
+
         return
     end
 
@@ -96,10 +82,10 @@ end
 
 
 local function remove_player_nametag(_client, _name, _islocal)
-    
+
     -- Don't do anything if it's the local player
     if _islocal then
-    
+
         return
     end
 
@@ -119,7 +105,7 @@ end
 
 
 local function remove_players_nametag()
-    
+
     for i, _ in pairs(players_nametag) do
 
         remove_player_nametag(i - 1, nil, false)
@@ -161,9 +147,9 @@ event.add_handler("core:on_player_left", remove_player_nametag)
 --- Triggered when the resource is stopped.
 -- @param _name (string) The name of the resource stopped.
 event.add_handler("core:on_resource_stop", function(_name)
-    
+
     if _name == CURRENT_RESOURCE_NAME then
-        
+
         remove_players_nametag()
     end
 end)

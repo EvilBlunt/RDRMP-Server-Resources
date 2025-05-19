@@ -4,8 +4,10 @@
 -- Thanks to K3rhos for RDRMP and help on Lua coding.
 
 local mp_transport_propset = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-local mp_transport_mp_text = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-local mp_transport_propset_blip = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+local mp_transport_mp_text1 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+local mp_transport_mp_text2 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+local mp_transport_propset_blip_pausemap = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+local mp_transport_propset_blip_hudmap = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 local mp_transport_context = {0, 0, 0, 0}
 local mp_transport_index = 1
 local mp_transport_in_use = false
@@ -117,6 +119,18 @@ end
 
 
 
+local function get_correct_offset(_camera_heading, _angle, _delta)
+
+	local rad_heading = (_camera_heading + _angle) * (math.pi / 180)
+
+    local cos_h = math.cos(rad_heading)
+    local sin_h = math.sin(rad_heading)
+
+    return vector3(-cos_h * _delta, 0.0, sin_h * _delta)
+end
+
+
+
 -- Clear all input contexts
 local function remove_contexts()
 
@@ -190,12 +204,9 @@ local function create_mp_transport_propsets(_player_position)
 
                 mp_transport_propset[i] = natives.object.create_propset_in_layout(natives.object.find_named_layout("PlayerLayout"), "", refGroupPath, mp_transport[i].propset.pos, vector3(0.0, mp_transport[i].propset.h, 0.0))
 
-                mp_transport_propset_blip[i] = natives.hud.add_blip_for_object(mp_transport_propset[i], 396, 0.0, 2, 0)
+                mp_transport_propset_blip_hudmap[i] = natives.hud.add_blip_for_object(mp_transport_propset[i], 396, 0.0, 2, 0)
 
-                natives.hud.set_blip_name(mp_transport_propset_blip[i], "mp_TELEPORT_tis")
-                natives.hud.set_blip_scale(mp_transport_propset_blip[i], 1.0)
-                natives.hud.set_blip_priority(mp_transport_propset_blip[i], 2)
-                natives.hud.set_blip_color(mp_transport_propset_blip[i], 1.0, 1.0, 1.0, 1.0)
+                natives.hud.set_blip_hudmap_only(mp_transport_propset_blip_hudmap[i], true)
 
                 local objectLayout = natives.object.get_layout_from_object(mp_transport_propset[i])
                 local objectIterator = natives.object.create_object_iterator(objectLayout)
@@ -221,12 +232,12 @@ local function create_mp_transport_propsets(_player_position)
 
         else
 
+            if natives.hud.is_blip_valid(mp_transport_propset_blip_hudmap[i]) then
+
+                natives.hud.remove_blip(mp_transport_propset_blip_hudmap[i])
+            end
+
             if natives.object.is_object_valid(mp_transport_propset[i]) then
-
-                if natives.hud.is_blip_valid(mp_transport_propset_blip[i]) then
-
-                    natives.hud.remove_blip(mp_transport_propset_blip[i])
-                end
 
                 natives.object.destroy_object(mp_transport_propset[i])
             end
@@ -236,9 +247,40 @@ end
 
 
 
+local function create_mp_transport_pausemap_blips()
+
+    for i = 1, #mp_transport do
+
+        mp_transport_propset_blip_pausemap[i] = natives.hud.add_blip_for_coord(mp_transport[i].propset.pos, 396, 0.0, 1, 0)
+
+        natives.hud.set_blip_name(mp_transport_propset_blip_pausemap[i], "BLIP_TRANSPORT_WHITE")
+        natives.hud.set_blip_pausemap_only(mp_transport_propset_blip_pausemap[i], true)
+    end
+end
+
+
+
+local function remove_mp_transport_all_blips()
+
+    for i = 1, #mp_transport do
+
+        if natives.hud.is_blip_valid(mp_transport_propset_blip_hudmap[i]) then
+
+            natives.hud.remove_blip(mp_transport_propset_blip_hudmap[i])
+        end
+
+        if natives.hud.is_blip_valid(mp_transport_propset_blip_pausemap[i]) then
+
+            natives.hud.remove_blip(mp_transport_propset_blip_pausemap[i])
+        end
+    end
+end
+
+
+
 -- Create a 3D text above the propset position under 20m
 -- if not in this area, the text get deleted
-local function create_mp_transport_mp_texts(_player_position, _camera_heading)
+local function create_mp_transport_mp_texts(_player_position)
 
     for i = 1, #mp_transport do
 
@@ -246,15 +288,25 @@ local function create_mp_transport_mp_texts(_player_position, _camera_heading)
 
         if vector3.distance(_player_position, propset_position) <= 20.0 then
 
-            if not natives.object.is_object_valid(mp_transport_mp_text[i]) then
+            if not natives.object.is_object_valid(mp_transport_mp_text1[i]) then
 
-                mp_transport_mp_text[i] = natives.gravestone.create_mp_text(mp_transport_propset[i], "", "mp_TELEPORT_tis", vector3(propset_position.x, propset_position.y + 2.0, propset_position.z), vector3(0.0, _camera_heading, 0.0), 0xFCAF17)
+                mp_transport_mp_text1[i] = natives.gravestone.create_mp_text(mp_transport_propset[i], "", "mp_TELEPORT_tis", propset_position, vector3(0.0, 0.0, 0.0), 0xFF7D00)
+            end
+
+            if not natives.object.is_object_valid(mp_transport_mp_text2[i]) then
+
+                mp_transport_mp_text2[i] = natives.gravestone.create_mp_text(mp_transport_propset[i], "", "mp_TELEPORT_tis", propset_position, vector3(0.0, 0.0, 0.0), 0)
             end
         else
 
-            if natives.object.is_object_valid(mp_transport_mp_text[i]) then
+            if natives.object.is_object_valid(mp_transport_mp_text1[i]) then
 
-                natives.object.destroy_object(mp_transport_mp_text[i])
+                natives.object.destroy_object(mp_transport_mp_text1[i])
+            end
+
+            if natives.object.is_object_valid(mp_transport_mp_text2[i]) then
+
+                natives.object.destroy_object(mp_transport_mp_text2[i])
             end
         end
     end
@@ -267,24 +319,52 @@ local function update_mp_transport_mp_texts(_camera_heading)
 
     for i = 1, #mp_transport do
 
-        if natives.object.is_object_valid(mp_transport_mp_text[i]) then
+        local propset_position = natives.object.get_object_position(mp_transport_propset[i])
 
-            natives.object.set_object_orientation(mp_transport_mp_text[i], vector3(0.0, _camera_heading, 0.0))
+        propset_position.y = propset_position.y + 2.0
+
+        if natives.object.is_object_valid(mp_transport_mp_text1[i]) then
+
+            natives.object.set_object_position(mp_transport_mp_text1[i], propset_position)
+            natives.object.set_object_orientation(mp_transport_mp_text1[i], vector3(0.0, _camera_heading, 0.0))
+        end
+
+        if natives.object.is_object_valid(mp_transport_mp_text2[i]) then
+
+            local position = propset_position
+
+            position.y = position.y - 0.01
+            position = position - get_correct_offset(_camera_heading, 90, 0.01)
+            position = position + get_correct_offset(_camera_heading, 180, 0.01)
+
+            natives.object.set_object_position(mp_transport_mp_text2[i], position)
+            natives.object.set_object_orientation(mp_transport_mp_text2[i], vector3(0.0, _camera_heading, 0.0))
         end
     end
 end
 
 
 
--- Global update function
-local function mp_transport_update()
-
+-- Script start function
+local function mp_transport_start()
+    
     -- We make sure that 'multiplayer' string table is loaded
     -- it will be needed to get the GXT entries from original multiplayer
-    if not natives.stringtable.has_string_table_loaded("multiplayer") then
+    natives.stringtable.request_string_table("multiplayer")
 
-        natives.stringtable.request_string_table("multiplayer")
+    while not natives.stringtable.has_string_table_loaded("multiplayer") do
+
+        thread.wait(0)
     end
+
+    -- Create all transports blips around the map
+    create_mp_transport_pausemap_blips()
+end
+
+
+
+-- Script update function
+local function mp_transport_update()
 
     local local_player_actor = natives.actor.get_player_actor(-1)
     local local_player_position = natives.object.get_object_position(local_player_actor)
@@ -320,7 +400,7 @@ local function mp_transport_update()
 
         if not mp_transport_in_use then
 
-            create_mp_transport_mp_texts(local_player_position, camera_heading)
+            create_mp_transport_mp_texts(local_player_position)
 
             if get_distance_to_mp_transport_propsets(local_player_position, 2.0) then
 
@@ -352,11 +432,16 @@ local function mp_transport_update()
         else
 
             -- Remove all 3D texts
-            for i = 1, #mp_transport_mp_text do
+            for i = 1, #mp_transport_mp_text1 do
 
-                if natives.object.is_object_valid(mp_transport_mp_text[i]) then
+                if natives.object.is_object_valid(mp_transport_mp_text1[i]) then
 
-                    natives.object.destroy_object(mp_transport_mp_text[i])
+                    natives.object.destroy_object(mp_transport_mp_text1[i])
+                end
+
+                if natives.object.is_object_valid(mp_transport_mp_text2[i]) then
+
+                    natives.object.destroy_object(mp_transport_mp_text2[i])
                 end
             end
 
@@ -422,6 +507,8 @@ end
 
 thread.create(function()
 
+    mp_transport_start()
+
     while true do
 
         mp_transport_update()
@@ -437,22 +524,26 @@ event.add_handler("core:on_resource_stop", function(_name)
     if _name == CURRENT_RESOURCE_NAME then
 
         -- We're cleaning everything on resource stop
+        remove_mp_transport_all_blips()
+
         for i = 1, #mp_transport do
 
             if natives.object.is_object_valid(mp_transport_propset[i]) then
 
-                if natives.hud.is_blip_valid(mp_transport_propset_blip[i]) then
-
-                    natives.hud.remove_blip(mp_transport_propset_blip[i])
-                end
-
                 natives.object.destroy_object(mp_transport_propset[i])
             end
 
-            if natives.object.is_object_valid(mp_transport_mp_text[i]) then
+            if natives.object.is_object_valid(mp_transport_mp_text1[i]) then
 
-                natives.object.destroy_object(mp_transport_mp_text[i])
+                natives.object.destroy_object(mp_transport_mp_text1[i])
+            end
+
+            if natives.object.is_object_valid(mp_transport_mp_text2[i]) then
+
+                natives.object.destroy_object(mp_transport_mp_text2[i])
             end
         end
+
+        remove_contexts()
     end
 end)
